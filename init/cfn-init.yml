@@ -115,17 +115,47 @@ Resources:
       Principal: 'apigateway.amazonaws.com'
       SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGatewayV2.ApiId}/*/*'
 
+AmplifyServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${AWS::StackName}-AmplifyServiceRole"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: "amplify.amazonaws.com"
+            Action: "sts:AssumeRole"
+      Policies:
+        - PolicyName: "AmplifyServicePolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "s3:*"
+                  - "cloudfront:*"
+                  - "codebuild:*"
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                  - "ssm:GetParameter"
+                  - "ssm:GetParametersByPath"
+                  - "ssm:GetParameterHistory"
+                  - "apigateway:Invoke"
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - "iam:PassRole"
+                Resource: !Sub "arn:aws:iam::${AWS::AccountId}:role/${AWS::StackName}-AmplifyServiceRole"
+
   AmplifyApp:
     Type: AWS::Amplify::App
     Properties:
       Name: !Sub "${AWS::StackName}-AmplifyApp"
       Repository: !Ref GitHubRepository
       AccessToken: !Sub "{{resolve:ssm:${GHToken}}}"
-      CustomRules: [
-          Source: "/",
-          Target: "/vue",
-          Status: "200",
-      ]
+      IAMServiceRole: !GetAtt AmplifyServiceRole.Arn
 
   AmplifyBranch:
     Type: AWS::Amplify::Branch
