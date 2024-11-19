@@ -1,0 +1,141 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Infrastructure for SSM Parameters, Lambda, API Gateway, Amplify App, and CodePipeline with S3 source and CodeBuild.
+
+Parameters:
+  GitHubRepository:
+    Type: String
+    Description: GitHub repository in the format owner/repo
+    Default: 'https://github.com/projectrefuge/unsc-initialization-template'
+  GitHubBranch:
+    Type: String
+    Description: GitHub branch to track
+    Default: 'main'
+  SourceBucketName:
+    Type: String
+    Default: "rf-unsc-test-bucket"
+    Description: The name of the existing S3 bucket that will act as the source.
+  GHToken:
+    Type: String
+    Description: The name of the existing GH token
+    Default: "unsc-gh-auth"
+
+Resources:
+  # SSM Parameters
+  MongoConnectionString:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: "mongodbstring"
+      Type: String
+      Value: "mongodb://localhost:27017/default"
+
+  # Lambda Execution Role
+  LambdaExecutionRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: LambdaExecutionPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                Resource: '*'
+
+  # Lambda Function
+  LambdaFunction:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      FunctionName: 'BackendLambda'
+      Handler: server.handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        S3Bucket: !Ref SourceBucketName
+        S3Key: backend/lambda.zip
+      Runtime: nodejs18.x
+      Timeout: 30
+
+  # API Gateway
+  ApiGatewayV2:
+    Type: 'AWS::ApiGatewayV2::Api'
+    Properties:
+      Name: 'mongo-vue-api'
+      ProtocolType: 'HTTP'
+      CorsConfiguration:
+        AllowOrigins:
+          - '*'
+        AllowMethods:
+          - 'OPTIONS'
+          - 'GET'
+          - 'POST'
+          - 'PUT'
+          - 'DELETE'
+        AllowHeaders:
+          - 'Content-Type'
+          - 'Authorization'
+
+  ApiGatewayV2Integration:
+    Type: 'AWS::ApiGatewayV2::Integration'
+    Properties:
+      ApiId: !Ref ApiGatewayV2
+      IntegrationType: 'AWS_PROXY'
+      IntegrationUri: !Sub
+        - 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaFunctionArn}/invocations'
+        - LambdaFunctionArn: !GetAtt LambdaFunction.Arn
+      PayloadFormatVersion: '2.0'
+
+  ApiGatewayV2Route:
+    Type: 'AWS::ApiGatewayV2::Route'
+    Properties:
+      ApiId: !Ref ApiGatewayV2
+      RouteKey: 'ANY /search'
+      Target: !Sub 'integrations/${ApiGatewayV2Integration}'
+
+  ApiGatewayV2Stage:
+    Type: 'AWS::ApiGatewayV2::Stage'
+    Properties:
+      ApiId: !Ref ApiGatewayV2
+      StageName: 'prod'
+      AutoDeploy: true
+
+  LambdaPermission:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !Ref LambdaFunction
+      Principal: 'apigateway.amazonaws.com'
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGatewayV2.ApiId}/*/*'
+
+  AmplifyApp:
+    Type: AWS::Amplify::App
+    Properties:
+      Name: !Sub "${AWS::StackName}-AmplifyApp"
+      Repository: !Ref GitHubRepository
+      AccessToken: !Sub "{{resolve:ssm:${GHToken}}}"
+
+  AmplifyBranch:
+    Type: AWS::Amplify::Branch
+    Properties:
+      AppId: !Select [1, !Split ["/", !Ref AmplifyApp]]
+      BranchName: !Ref GitHubBranch
+      EnableAutoBuild: true
+
+Outputs:
+  ApiUrl:
+    Description: "API Gateway endpoint URL for Prod environment"
+    Value: !Sub "https://${ApiGatewayV2}.execute-api.${AWS::Region}.amazonaws.com/prod"
+  LambdaFunctionName:
+    Value: !Ref LambdaFunction
+    Description: Lambda function name
+  AmplifyAppId:
+    Value: !Ref AmplifyApp
+    Description: Amplify app ID
