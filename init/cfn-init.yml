@@ -121,6 +121,11 @@ Resources:
       Name: !Sub "${AWS::StackName}-AmplifyApp"
       Repository: !Ref GitHubRepository
       AccessToken: !Sub "{{resolve:ssm:${GHToken}}}"
+      CustomRules: [
+          Source: "/",
+          Target: "/vue",
+          Status: "200",
+      ]
 
   AmplifyBranch:
     Type: AWS::Amplify::Branch
