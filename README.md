@@ -22,26 +22,36 @@ The project is designed as a blueprint for others.
 In collaboration with the ICRC, the solution is being prepared for release as open-source under their Open Source Program Office (OSPO).
 Usage
 
+## Prerequisites
+
+MongoDB AtlasDB cluster.
+Use this repo as a skeleton/framework to upload vector embeddings to AtlasDB
+AWS account
+
 ## Usage 
 
 1. Create a Fine-Grained Personal Access Token (PAT)
 Generate a Personal Access Token (PAT) with fine-grained permissions for the organization.
 Optionally, test access to ensure the token works:
-bash
-Copy code
-curl -H "Authorization: token <your_github_pat>"
-https://api.github.com/repos/projectrefuge/unsc-initialization-template
 
-2. Create an SSM Parameter for the GitHub Token
-Save your PAT in AWS Systems Manager Parameter Store as a secure parameter for use by Lambda or other services.
+```bash
+curl -H "Authorization: token <your_github_pat>"
+https://api.github.com/repos/[your-org]/[your-repository]
+```
+
+2. AWS initial setup:
+- Create an S3 bucket
+- Update the Lambda code in the `function` directory to include your DB Connection string, then upload it to the bucket with the path `backend/lambda.zip`. (In the future, this process will be automated via a shell script.)
+- Create an SSM parameter for the GitHub PAT created in step 1.
+
+3. Deploy the CloudFormation stack:
+Go to CloudFormation console and create a new stack using the `cfn-init.yml` template file in the `init` directory. Populate the parameters with the resource names you created in the AWS steps above and deploy the stack.
 
 3. Configure Application Repository
 In your app's settings under Branch Settings, click "Reconnect Repository."
 Allow the installation of the Amplify app, scoped to your repository.
 
-4. Create a Source Bucket and Upload Lambda Code
-Set up an S3 bucket to serve as the source for your Lambda function.
-Upload the Lambda function code into the bucket. (In the future, this process will be automated via a shell script.)
+
 
 ## Features
 Natural Language Search: Query decades of resolutions instantly using semantic search.

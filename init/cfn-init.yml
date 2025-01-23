@@ -5,28 +5,28 @@ Parameters:
   GitHubRepository:
     Type: String
     Description: GitHub repository in the format owner/repo
-    Default: 'https://github.com/projectrefuge/unsc-initialization-template'
+    Default: 'https://github.com/projectrefuge/resolutions-search-template'
   GitHubBranch:
     Type: String
     Description: GitHub branch to track
     Default: 'main'
   SourceBucketName:
     Type: String
-    Default: "rf-unsc-test-bucket"
+    Default: "rf-resolutions-bucket"
     Description: The name of the existing S3 bucket that will act as the source.
   GHToken:
     Type: String
     Description: The name of the existing GH token
-    Default: "unsc-gh-auth"
+    Default: "resolutions-gh-auth"
 
 Resources:
   # SSM Parameters
-  MongoConnectionString:
-    Type: AWS::SSM::Parameter
-    Properties:
-      Name: "mongodbstring"
-      Type: String
-      Value: "mongodb://localhost:27017/default"
+  # MongoConnectionString:
+  #   Type: AWS::SSM::Parameter
+  #   Properties:
+  #     Name: "mongodbstring"
+  #     Type: String
+  #     Value: "mongodb://localhost:27017/default"
 
   # Lambda Execution Role
   LambdaExecutionRole:
@@ -55,12 +55,12 @@ Resources:
   LambdaFunction:
     Type: 'AWS::Lambda::Function'
     Properties:
-      FunctionName: 'BackendLambda'
+      FunctionName: 'ResolutionsLambda'
       Handler: server.handler
       Role: !GetAtt LambdaExecutionRole.Arn
       Code:
         S3Bucket: !Ref SourceBucketName
-        S3Key: backend/lambda.zip
+        S3Key: lambda.zip
       Runtime: nodejs18.x
       Timeout: 30
 
