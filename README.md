@@ -27,7 +27,7 @@ Usage
 
 ## Prerequisites
 
-1. **MongoDB Atlas Cluster**: Ensure you have a MongoDB Atlas cluster set up. You can create one [here](https://www.mongodb.com/cloud/atlas).
+1. **MongoDB Atlas Cluster**: Ensure you have a MongoDB Atlas cluster set up. You can create one [here](https://www.mongodb.com/cloud/atlas). See [this repository](https://github.com/projectrefuge/resolutions-data-engr-sample) for a sample script and docs to upload data to MongoDB Atlas.
 
 2. **AWS Account**: You need an AWS account to access AWS services.
 
