@@ -19,7 +19,7 @@ cp package-lock.json $LAMBDA_FUNCTION_DIR/
 # Navigate to the lambda directory
 cd $LAMBDA_FUNCTION_DIR
 
-# Install node modules
+#	 Install node modules
 npm install --production
 
 # Zip the Lambda function code along with node_modules
